@@ -1,14 +1,7 @@
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
 use tauri::State;
 
-use crate::pi_rpc::PiRpcManager;
 use crate::types::RpcCommand;
-
-pub struct AppState {
-    pub pi: Arc<Mutex<PiRpcManager>>,
-    pub event_tx: mpsc::UnboundedSender<String>,
-}
+use crate::config_commands::AppState;
 
 #[tauri::command]
 pub async fn send_prompt(
