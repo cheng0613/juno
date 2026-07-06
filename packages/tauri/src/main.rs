@@ -48,6 +48,7 @@ fn main() {
             session_commands::list_sessions,
             session_commands::switch_session,
             session_commands::get_session_messages,
+            session_commands::list_files,
         ])
         .setup(move |app| {
             // Migrate from .pi/agent to .juno/agent if needed
