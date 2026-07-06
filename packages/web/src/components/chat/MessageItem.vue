@@ -1,14 +1,47 @@
 <script setup lang="ts">
 import type { ChatMessage } from '@/stores/session'
 import { User, Bot, Terminal, FileText, Code, ChevronDown, ChevronRight, Loader2 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
+import { Marked } from 'marked'
+import hljs from 'highlight.js'
+
+const marked = new Marked({
+  gfm: true,
+  breaks: true,
+  highlight(code: string, lang: string) {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value
+    }
+    return hljs.highlightAuto(code).value
+  },
+})
 
 const props = defineProps<{
   message: ChatMessage
 }>()
 
-const isThinkingExpanded = ref(false)
+const isThinkingExpanded = ref(true)
 const expandedToolCalls = ref<Set<string>>(new Set())
+const contentRef = ref<HTMLElement | null>(null)
+
+const renderedContent = computed(() => {
+  if (!props.message.content) return ''
+  try {
+    return marked.parse(props.message.content) as string
+  } catch {
+    return props.message.content
+  }
+})
+
+watch(renderedContent, () => {
+  nextTick(() => {
+    if (contentRef.value) {
+      contentRef.value.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block as HTMLElement)
+      })
+    }
+  })
+})
 
 function toggleToolCall(id: string) {
   if (expandedToolCalls.value.has(id)) {
@@ -42,19 +75,19 @@ function toolIcon(name: string) {
           @click="isThinkingExpanded = !isThinkingExpanded"
         >
           <component :is="isThinkingExpanded ? ChevronDown : ChevronRight" class="h-3 w-3" />
-          Thinking
+          Thinking ({{ message.thinking.length }} chars)
         </button>
         <div
           v-if="isThinkingExpanded"
-          class="mt-1 rounded bg-muted-foreground/10 p-2 text-xs italic whitespace-pre-wrap"
+          class="mt-1 rounded bg-muted-foreground/10 p-2 text-xs italic whitespace-pre-wrap max-h-48 overflow-y-auto"
         >
           {{ message.thinking }}
         </div>
       </div>
 
-      <div class="whitespace-pre-wrap text-sm leading-relaxed">
-        {{ message.content }}
-        <span v-if="message.isStreaming" class="animate-pulse">▊</span>
+      <div ref="contentRef" class="prose prose-sm max-w-none dark:prose-invert">
+        <div v-if="message.isStreaming" v-html="renderedContent + '▊'" />
+        <div v-else v-html="renderedContent" />
       </div>
 
       <div v-if="message.toolCalls?.length" class="mt-2 space-y-1">
@@ -75,7 +108,7 @@ function toolIcon(name: string) {
           </button>
           <div v-if="expandedToolCalls.has(tc.id)" class="border-t px-2 py-1">
             <div v-if="tc.args && Object.keys(tc.args).length" class="mb-1">
-              <code class="text-xs">{{ JSON.stringify(tc.args, null, 2) }}</code>
+              <pre class="text-xs whitespace-pre-wrap font-mono bg-muted-foreground/5 rounded p-1">{{ JSON.stringify(tc.args, null, 2) }}</pre>
             </div>
             <div v-if="tc.result" class="max-h-48 overflow-y-auto">
               <pre class="text-xs whitespace-pre-wrap font-mono bg-muted-foreground/5 rounded p-1">{{ tc.result }}</pre>
@@ -93,3 +126,63 @@ function toolIcon(name: string) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.prose pre {
+  background-color: hsl(var(--muted));
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+.prose code {
+  font-size: 0.8rem;
+  background-color: hsl(var(--muted));
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+.prose p {
+  margin: 0.5rem 0;
+}
+.prose p:first-child {
+  margin-top: 0;
+}
+.prose p:last-child {
+  margin-bottom: 0;
+}
+.prose ul, .prose ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.prose li {
+  margin: 0.25rem 0;
+}
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  margin: 0.75rem 0 0.5rem;
+  font-weight: 600;
+}
+.prose blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: hsl(var(--muted-foreground));
+}
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+.prose th, .prose td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+}
+.prose th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+}
+</style>

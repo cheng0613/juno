@@ -1620,11 +1620,14 @@ dependencies = [
 name = "juno"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-shell",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -3404,6 +3407,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "windows-sys 0.61.2",
 ]

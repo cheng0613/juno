@@ -3,6 +3,22 @@ import { ref, computed } from 'vue'
 import { createSocket, getSocket } from '@/api/socket'
 import { api } from '@/api/httpClient'
 
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI__' in window
+}
+
+function getTauri() {
+  return (window as any).__TAURI__
+}
+
+async function tauriInvoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  const tauri = getTauri()
+  if (tauri?.core) {
+    return tauri.core.invoke(cmd, args)
+  }
+  throw new Error('Not in Tauri environment')
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant' | 'tool'
@@ -34,6 +50,20 @@ export const useSessionStore = defineStore('session', () => {
   const lastMessage = computed(() => messages.value[messages.value.length - 1])
 
   function connect() {
+    if (isTauri()) {
+      isConnected.value = true
+      const tauri = getTauri()
+      if (tauri?.event) {
+        tauri.event.listen('pi-event', (event: any) => {
+          handleEvent(event.payload)
+        })
+        tauri.event.listen('pi-extension-ui', (event: any) => {
+          handleEvent(event.payload)
+        })
+      }
+      return
+    }
+
     const socket = createSocket()
     isConnected.value = true
 
@@ -217,6 +247,14 @@ export const useSessionStore = defineStore('session', () => {
     }
     messages.value.push(msg)
 
+    if (isTauri()) {
+      tauriInvoke('send_prompt', { message }).catch((err) => {
+        console.error('[Tauri] send_prompt error:', err)
+        error.value = err
+      })
+      return
+    }
+
     const socket = getSocket()
     if (socket?.connected) {
       socket.emit('prompt', { message })
@@ -224,9 +262,33 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   function abort() {
+    if (isTauri()) {
+      tauriInvoke('send_abort').catch(console.error)
+      isStreaming.value = false
+      return
+    }
     const socket = getSocket()
     socket?.emit('abort')
     isStreaming.value = false
+  }
+
+  function setModel(provider: string, modelId: string) {
+    if (isTauri()) {
+      tauriInvoke('set_model', { provider, modelId }).catch(console.error)
+      return
+    }
+    const socket = getSocket()
+    socket?.emit('set_model', { provider, modelId })
+  }
+
+  function setThinkingLevel(level: string) {
+    currentThinkingLevel.value = level
+    if (isTauri()) {
+      tauriInvoke('set_thinking_level', { level }).catch(console.error)
+      return
+    }
+    const socket = getSocket()
+    socket?.emit('set_thinking_level', { level })
   }
 
   function clearMessages() {
@@ -245,6 +307,8 @@ export const useSessionStore = defineStore('session', () => {
     connect,
     sendPrompt,
     abort,
+    setModel,
+    setThinkingLevel,
     clearMessages,
   }
 })

@@ -36,6 +36,7 @@ pnpm-lock.yaml
 
 # OpenCode
 .opencode/plans/
+opencode.json
 
 # Volta
 .volta/
