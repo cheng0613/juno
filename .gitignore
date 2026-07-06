@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Rust (Tauri)
+target/
+
+# Tauri auto-generated schemas
+gen/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# pnpm
+pnpm-lock.yaml
+
+# OpenCode
+.opencode/plans/
+
+# Volta
+.volta/
+
+# Temp
+*.tmp

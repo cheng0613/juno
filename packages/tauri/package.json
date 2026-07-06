@@ -1,0 +1,17 @@
+{
+  "name": "@juno/tauri",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "set PATH=C:\\Program\\mingw64\\bin;%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
+    "build": "set PATH=C:\\Program\\mingw64\\bin;%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build",
+    "icon": "tauri icon"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

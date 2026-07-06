@@ -1,0 +1,20 @@
+{
+  "name": "juno",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:server": "pnpm --filter @juno/server dev",
+    "dev:web": "pnpm --filter @juno/web dev",
+    "build:server": "pnpm --filter @juno/server build",
+    "build:web": "pnpm --filter @juno/web build",
+    "build": "pnpm build:server && pnpm build:web",
+    "dev:tauri": "pnpm --filter @juno/tauri dev",
+    "build:tauri": "pnpm --filter @juno/tauri build"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "volta": {
+    "node": "24.18.0"
+  }
+}

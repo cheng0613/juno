@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicorski/tauri-docs/refs/heads/dev/src/schemas/config.schema.json",
+  "productName": "Juno",
+  "version": "0.1.0",
+  "identifier": "com.juno.app",
+  "build": {
+    "beforeDevCommand": "pnpm --prefix ../web dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm --prefix ../web build",
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Juno - AI Coding Agent",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "externalBin": []
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  }
+}
