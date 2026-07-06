@@ -93,6 +93,42 @@ onMounted(async () => {
     providerStore.fetchModels(true),
     settingsStore.fetchSettings(),
   ])
+
+  // Keyboard shortcuts
+  function onKeydown(e: KeyboardEvent) {
+    const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
+
+    // Escape: abort or blur
+    if (e.key === 'Escape' && !isInput) {
+      if (store.isStreaming) { store.abort(); e.preventDefault() }
+      return
+    }
+
+    // Don't intercept when typing in input (except Ctrl+ shortcuts)
+    if (isInput && !(e.ctrlKey || e.metaKey)) return
+
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      switch (e.key.toLowerCase()) {
+        case 'l': // Ctrl+L: toggle settings
+          e.preventDefault()
+          showSettings.value = !showSettings.value
+          break
+        case 'b': // Ctrl+B: toggle sidebar
+          e.preventDefault()
+          showSidebar.value = !showSidebar.value
+          break
+        case 'n': // Ctrl+N: new session
+          e.preventDefault()
+          if (!store.isStreaming) store.clearMessages()
+          break
+        case '.': // Ctrl+.: abort
+          e.preventDefault()
+          if (store.isStreaming) store.abort()
+          break
+      }
+    }
+  }
+  document.addEventListener('keydown', onKeydown)
 })
 
 const allModels = computed(() => {
