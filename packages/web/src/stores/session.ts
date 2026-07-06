@@ -249,17 +249,17 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  function sendPrompt(message: string) {
+  function sendPrompt(message: string, images?: { data: string; mimeType: string }[]) {
     const msg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: message,
+      content: message + (images?.length ? ` (${images.length} image(s))` : ''),
       timestamp: Date.now(),
     }
     messages.value.push(msg)
 
     if (isTauri()) {
-      tauriInvoke('send_prompt', { message }).catch((err) => {
+      tauriInvoke('send_prompt', { message, images }).catch((err) => {
         console.error('[Tauri] send_prompt error:', err)
         error.value = err
       })
@@ -268,7 +268,7 @@ export const useSessionStore = defineStore('session', () => {
 
     const socket = getSocket()
     if (socket?.connected) {
-      socket.emit('prompt', { message })
+      socket.emit('prompt', { message, images })
     }
   }
 

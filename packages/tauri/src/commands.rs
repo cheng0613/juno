@@ -7,10 +7,16 @@ use crate::config_commands::AppState;
 pub async fn send_prompt(
     state: State<'_, AppState>,
     message: String,
+    images: Option<Vec<crate::types::ImageContent>>,
     streaming_behavior: Option<String>,
 ) -> Result<(), String> {
     let mut pi = state.pi.lock().await;
-    pi.send_prompt(&message, streaming_behavior.as_deref())
+    pi.send_command(&crate::types::RpcCommand::Prompt {
+        id: Some(uuid::Uuid::new_v4().to_string()),
+        message,
+        images,
+        streaming_behavior,
+    })
 }
 
 #[tauri::command]

@@ -167,8 +167,8 @@ function scrollToBottom() {
   })
 }
 
-function handleSend(message: string) {
-  store.sendPrompt(message)
+function handleSend(message: string, images?: { data: string; mimeType: string }[]) {
+  store.sendPrompt(message, images)
   scrollToBottom()
 }
 
