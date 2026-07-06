@@ -2,19 +2,35 @@
 import type { ChatMessage } from '@/stores/session'
 import { User, Bot, Terminal, FileText, Code, ChevronDown, ChevronRight, Loader2 } from 'lucide-vue-next'
 import { ref, computed, watch, nextTick } from 'vue'
-import { Marked } from 'marked'
-import hljs from 'highlight.js'
 
-const marked = new Marked({
-  gfm: true,
-  breaks: true,
-  highlight(code: string, lang: string) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value
-    }
-    return hljs.highlightAuto(code).value
-  },
-})
+let markedInstance: any = null
+
+async function getMarked() {
+  if (markedInstance) return markedInstance
+  const [Marked, hljs] = await Promise.all([
+    import('marked').then(m => m.Marked),
+    import('highlight.js'),
+  ])
+  // Load highlight.js CSS dynamically
+  if (!document.querySelector('#hljs-theme')) {
+    const link = document.createElement('link')
+    link.id = 'hljs-theme'
+    link.rel = 'stylesheet'
+    link.href = 'https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/github-dark.min.css'
+    document.head.appendChild(link)
+  }
+  markedInstance = new Marked({
+    gfm: true,
+    breaks: true,
+    highlight(code: string, lang: string) {
+      if (lang && hljs.default.getLanguage(lang)) {
+        return hljs.default.highlight(code, { language: lang }).value
+      }
+      return hljs.default.highlightAuto(code).value
+    },
+  })
+  return markedInstance
+}
 
 const props = defineProps<{
   message: ChatMessage
@@ -23,15 +39,19 @@ const props = defineProps<{
 const isThinkingExpanded = ref(true)
 const expandedToolCalls = ref<Set<string>>(new Set())
 const contentRef = ref<HTMLElement | null>(null)
+const renderedContent = ref('')
+const hljsLoaded = ref(false)
 
-const renderedContent = computed(() => {
-  if (!props.message.content) return ''
+watch(() => props.message.content, async (val) => {
+  if (!val) { renderedContent.value = ''; return }
   try {
-    return marked.parse(props.message.content) as string
+    const marked = await getMarked()
+    hljsLoaded.value = true
+    renderedContent.value = marked.parse(val) as string
   } catch {
-    return props.message.content
+    renderedContent.value = val
   }
-})
+}, { immediate: true })
 
 watch(renderedContent, () => {
   nextTick(() => {
