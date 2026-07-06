@@ -31,17 +31,25 @@ impl PiRpcManager {
     }
 
     pub fn spawn(&mut self) -> Result<(), String> {
-        let wrapper_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("bin")
-            .join("pi-rpc.cjs");
-        
-        if !wrapper_path.exists() {
-            return Err(format!("Wrapper not found at: {:?}", wrapper_path));
-        }
-        let node = find_node().ok_or("Node.js not found in PATH")?;
-        
-        let mut child = Command::new(&node)
-            .arg(&wrapper_path)
+        let bin_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bin");
+
+        // Try standalone pi binary first (no Node.js needed)
+        let pi_binary = bin_dir.join("pi.exe");
+        let use_binary = pi_binary.exists();
+
+        let (cmd, args) = if use_binary {
+            (pi_binary.to_string_lossy().to_string(), vec!["--mode".to_string(), "rpc".to_string()])
+        } else {
+            let wrapper_path = bin_dir.join("pi-rpc.cjs");
+            if !wrapper_path.exists() {
+                return Err(format!("Neither pi.exe nor pi-rpc.cjs found in {:?}", bin_dir));
+            }
+            let node = find_node().ok_or("Node.js not found in PATH (and no pi.exe available)")?;
+            (node, vec![wrapper_path.to_string_lossy().to_string()])
+        };
+
+        let mut child = Command::new(&cmd)
+            .args(&args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())

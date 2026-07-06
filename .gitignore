@@ -43,3 +43,6 @@ opencode.json
 
 # Temp
 *.tmp
+
+# Compiled binaries
+packages/tauri/bin/pi.exe

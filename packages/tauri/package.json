@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "set PATH=C:\\Program\\mingw64\\bin;%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
     "build": "set PATH=C:\\Program\\mingw64\\bin;%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build",
-    "icon": "tauri icon"
+    "icon": "tauri icon",
+    "build:pi": "bun build --compile --outfile=bin/pi --target=bun-windows-x64 --env=disable ../../node_modules/.pnpm/@earendil-works+pi-coding-agent@*/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0"
