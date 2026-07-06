@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc;
 
+use crate::config;
 use crate::types::*;
 
 pub struct PiRpcManager {
@@ -48,8 +49,12 @@ impl PiRpcManager {
             (node, vec![wrapper_path.to_string_lossy().to_string()])
         };
 
+        let juno_dir = config::juno_agent_dir().to_string_lossy().to_string();
+
         let mut child = Command::new(&cmd)
             .args(&args)
+            .env("PI_CODING_AGENT_DIR", &juno_dir)
+            .env("JUNO_AGENT_DIR", &juno_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())

@@ -27,6 +27,11 @@ pub enum RpcCommand {
     },
     #[serde(rename = "get_messages")]
     GetMessages,
+    #[serde(rename = "switch_session")]
+    SwitchSession {
+        #[serde(rename = "sessionPath")]
+        session_path: String,
+    },
     #[serde(rename = "set_model")]
     SetModel {
         provider: String,

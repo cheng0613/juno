@@ -103,11 +103,11 @@ pub const BUILTIN_PROVIDERS: &[(&str, &str)] = &[
 
 // ── File I/O ──
 
-pub fn pi_agent_dir() -> PathBuf {
+pub fn juno_agent_dir() -> PathBuf {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".pi").join("agent")
+    PathBuf::from(home).join(".juno").join("agent")
 }
 
 pub fn read_json<T: for<'a> Deserialize<'a>>(path: &PathBuf) -> Result<T, String> {
@@ -129,9 +129,57 @@ pub fn write_json<T: Serialize>(path: &PathBuf, data: &T) -> Result<(), String> 
 }
 
 // Default file paths
-pub fn auth_path() -> PathBuf { pi_agent_dir().join("auth.json") }
-pub fn models_path() -> PathBuf { pi_agent_dir().join("models.json") }
-pub fn settings_path() -> PathBuf { pi_agent_dir().join("settings.json") }
+pub fn auth_path() -> PathBuf { juno_agent_dir().join("auth.json") }
+pub fn models_path() -> PathBuf { juno_agent_dir().join("models.json") }
+pub fn settings_path() -> PathBuf { juno_agent_dir().join("settings.json") }
+pub fn sessions_dir() -> PathBuf { juno_agent_dir().join("sessions") }
+
+// ── Session listing ──
+
+#[derive(Serialize, Clone)]
+pub struct SessionInfo {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub message_count: u32,
+    pub timestamp: u64,
+}
+
+pub fn list_sessions() -> Vec<SessionInfo> {
+    let dir = sessions_dir();
+    if !dir.exists() { return vec![]; }
+
+    let mut sessions = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") { continue; }
+
+            // Read first line (header) for metadata
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Some(first_line) = content.lines().next() {
+                    if let Ok(header) = serde_json::from_str::<serde_json::Value>(first_line) {
+                        let info = &header["sessionInfo"];
+                        let id = info.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let name = info.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let ts = info.get("timestamp").and_then(|v| v.as_u64()).unwrap_or(0);
+                        let msg_count = content.lines().count().saturating_sub(1) as u32;
+
+                        sessions.push(SessionInfo {
+                            id,
+                            name: if name.is_empty() { path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string() } else { name },
+                            path: path.to_string_lossy().to_string(),
+                            message_count: msg_count,
+                            timestamp: ts,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    sessions.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    sessions
+}
 
 // ── Convenience readers/writers ──
 

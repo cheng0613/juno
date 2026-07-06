@@ -40,6 +40,12 @@ export class PiService implements OnModuleInit, OnModuleDestroy {
 async onModuleInit() {
     this.logger.log('Initializing PiService...')
 
+    // Set config directory to ~/.juno/agent/ instead of ~/.pi/agent/
+    const os = await import('os')
+    const path = await import('path')
+    const junoDir = path.join(os.homedir(), '.juno', 'agent')
+    process.env.PI_CODING_AGENT_DIR = junoDir
+
     this.authStorage = AuthStorage.create()
     this.modelRegistry = ModelRegistry.create(this.authStorage)
     this.settingsManager = SettingsManager.create(process.cwd())

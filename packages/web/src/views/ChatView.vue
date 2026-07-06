@@ -10,12 +10,14 @@ import Dialog from '@/components/ui/dialog.vue'
 import NativeSelect from '@/components/ui/native-select.vue'
 import Button from '@/components/ui/button.vue'
 import Badge from '@/components/ui/badge.vue'
-import { Settings, Bot, Loader2, SlidersHorizontal, MessageSquare, Plus, Trash2 } from 'lucide-vue-next'
+import { Settings, Bot, Loader2, SlidersHorizontal, MessageSquare, Plus, Sun, Moon } from 'lucide-vue-next'
+import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
 const store = useSessionStore()
 const providerStore = useProviderStore()
 const settingsStore = useSettingsStore()
+const { theme, toggleTheme } = useTheme()
 
 const messagesContainer = ref<HTMLElement | null>(null)
 const showSettings = ref(false)
@@ -24,48 +26,59 @@ const showSidebar = ref(false)
 interface SessionEntry {
   id: string
   name: string
+  path: string
   messageCount: number
   timestamp: number
 }
 
 const sessions = ref<SessionEntry[]>([])
+const sessionsLoading = ref(false)
 
-function loadSessionHistory() {
-  try {
-    const saved = localStorage.getItem('juno-sessions')
-    if (saved) sessions.value = JSON.parse(saved)
-  } catch {}
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI__' in window
 }
 
-function saveSession() {
-  if (store.messages.length === 0) return
-  const entry: SessionEntry = {
-    id: crypto.randomUUID(),
-    name: store.messages[0]?.content.slice(0, 50) || 'New session',
-    messageCount: store.messages.length,
-    timestamp: Date.now(),
-  }
-  const existing = sessions.value.findIndex(s => s.id === store.sessionId)
-  if (existing >= 0) {
-    sessions.value[existing] = { ...sessions.value[existing], messageCount: store.messages.length }
+async function tauriInvoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  const tauri = (window as any).__TAURI__
+  if (tauri?.core) return tauri.core.invoke(cmd, args)
+  throw new Error('Not in Tauri environment')
+}
+
+async function loadSessionHistory() {
+  if (isTauri()) {
+    sessionsLoading.value = true
+    try {
+      const list = await tauriInvoke<any[]>('list_sessions')
+      sessions.value = (list || []).map((s: any) => ({
+        id: s.id,
+        name: s.name || 'Untitled',
+        path: s.path,
+        messageCount: s.message_count,
+        timestamp: s.timestamp,
+      }))
+    } catch (err) {
+      console.error('Failed to list sessions:', err)
+    } finally {
+      sessionsLoading.value = false
+    }
   } else {
-    sessions.value.unshift(entry)
+    // Web mode: load from localStorage
+    try {
+      const saved = localStorage.getItem('juno-sessions')
+      if (saved) sessions.value = JSON.parse(saved)
+    } catch {}
   }
-  // Keep only 50 sessions
-  if (sessions.value.length > 50) sessions.value = sessions.value.slice(0, 50)
-  localStorage.setItem('juno-sessions', JSON.stringify(sessions.value))
 }
 
-function restoreSession(id: string) {
-  // For now: save current, load placeholder (real restore needs RPC)
-  saveSession()
-  store.clearMessages()
-  // In future: call RPC to load session
-}
-
-function deleteSession(id: string) {
-  sessions.value = sessions.value.filter(s => s.id !== id)
-  localStorage.setItem('juno-sessions', JSON.stringify(sessions.value))
+async function restoreSession(path: string) {
+  if (isTauri()) {
+    store.clearMessages()
+    try {
+      await tauriInvoke('switch_session', { path })
+    } catch (err) {
+      console.error('Failed to switch session:', err)
+    }
+  }
 }
 
 const thinkingOptions = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh']
@@ -154,7 +167,7 @@ function handleAbort() {
           <Settings class="h-4 w-4 mr-1" />
           Models
         </Button>
-        <Button variant="ghost" size="sm" @click="saveSession(); store.clearMessages()">
+        <Button variant="ghost" size="sm" @click="store.clearMessages()">
           <Plus class="h-4 w-4 mr-1" />
           New
         </Button>
@@ -176,7 +189,7 @@ function handleAbort() {
           v-for="s in sessions"
           :key="s.id"
           class="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent text-left"
-          @click="restoreSession(s.id)"
+          @click="restoreSession(s.path)"
         >
           <MessageSquare class="h-3 w-3 flex-shrink-0" />
           <div class="min-w-0 flex-1">

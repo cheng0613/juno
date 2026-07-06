@@ -6,6 +6,7 @@ mod commands;
 mod config;
 mod config_commands;
 mod pi_rpc;
+mod session_commands;
 mod types;
 
 fn main() {
@@ -44,8 +45,14 @@ fn main() {
             config_commands::set_default_model,
             config_commands::set_enabled_models,
             config_commands::get_models,
+            session_commands::list_sessions,
+            session_commands::switch_session,
+            session_commands::get_session_messages,
         ])
         .setup(move |app| {
+            // Migrate from .pi/agent to .juno/agent if needed
+            migrate_pi_to_juno();
+
             let pi = pi.clone();
             let handle = app.handle().clone();
             let state = current_state.clone();
@@ -105,4 +112,40 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn migrate_pi_to_juno() {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    let pi_dir = std::path::PathBuf::from(&home).join(".pi").join("agent");
+    let juno_dir = std::path::PathBuf::from(&home).join(".juno").join("agent");
+
+    if !pi_dir.exists() || juno_dir.exists() { return; }
+
+    eprintln!("Migrating ~/.pi/agent to ~/.juno/agent...");
+    let _ = std::fs::create_dir_all(&juno_dir);
+
+    let files = ["auth.json", "models.json", "settings.json"];
+    for f in &files {
+        let src = pi_dir.join(f);
+        let dst = juno_dir.join(f);
+        if src.exists() { let _ = std::fs::copy(&src, &dst); }
+    }
+
+    let pi_sessions = pi_dir.join("sessions");
+    let juno_sessions = juno_dir.join("sessions");
+    if pi_sessions.exists() {
+        let _ = std::fs::create_dir_all(&juno_sessions);
+        if let Ok(entries) = std::fs::read_dir(&pi_sessions) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                    let dst = juno_sessions.join(path.file_name().unwrap());
+                    let _ = std::fs::copy(&path, &dst);
+                }
+            }
+        }
+    }
+    eprintln!("Migration complete.");
 }
