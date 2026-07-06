@@ -51,17 +51,15 @@ fn main() {
             let handle = app.handle().clone();
 
             tauri::async_runtime::spawn(async move {
-                {
+                // Get event receiver FIRST, then spawn
+                let mut rx = {
                     let mut pi_lock = pi.lock().await;
+                    let rx = pi_lock.event_receiver();
                     if let Err(e) = pi_lock.spawn() {
                         eprintln!("Failed to start pi RPC: {}", e);
                         return;
                     }
-                }
-
-                let mut rx = {
-                    let mut pi_lock = pi.lock().await;
-                    pi_lock.event_receiver()
+                    rx
                 };
 
                 while let Some(line) = rx.recv().await {

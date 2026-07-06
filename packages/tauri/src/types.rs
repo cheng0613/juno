@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 // ── Commands sent to pi --mode rpc ──
@@ -57,7 +58,8 @@ pub struct ImageContent {
     #[serde(rename = "type")]
     pub content_type: String,
     pub data: String,
-    pub mimeType: String,
+    #[serde(rename = "mimeType")]
+    pub mime_type: String,
 }
 
 // ── Responses from pi --mode rpc ──

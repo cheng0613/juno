@@ -146,6 +146,7 @@ impl PiRpcManager {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn is_running(&mut self) -> bool {
         if let Some(ref mut child) = self.child {
             match child.try_wait() {
