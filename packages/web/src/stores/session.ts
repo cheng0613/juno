@@ -51,7 +51,6 @@ export const useSessionStore = defineStore('session', () => {
 
   function connect() {
     if (isTauri()) {
-      isConnected.value = true
       const tauri = getTauri()
       if (tauri?.event) {
         tauri.event.listen('pi-event', (event: any) => {
@@ -60,6 +59,18 @@ export const useSessionStore = defineStore('session', () => {
         tauri.event.listen('pi-extension-ui', (event: any) => {
           handleEvent(event.payload)
         })
+        // Verify pi process is alive
+        tauriInvoke<any>('get_pi_state')
+          .then((state) => {
+            isConnected.value = true
+            isStreaming.value = state.is_streaming || false
+            sessionId.value = state.session_id || ''
+          })
+          .catch((err) => {
+            console.error('[Tauri] pi process not responding:', err)
+            isConnected.value = false
+            error.value = 'Failed to connect to pi agent'
+          })
       }
       return
     }

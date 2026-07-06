@@ -79,11 +79,11 @@ pub async fn extension_ui_response(
 pub async fn get_pi_state(
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let mut pi = state.pi.lock().await;
-    let id = uuid::Uuid::new_v4().to_string();
-    pi.send_command(&RpcCommand::GetState { id: Some(id.clone()) })?;
+    let cached = state.current_state.read().await;
     Ok(serde_json::json!({
-        "pending": true,
-        "request_id": id,
+        "is_streaming": cached.is_streaming,
+        "message_count": cached.message_count,
+        "is_connected": cached.is_connected,
+        "session_id": cached.session_id,
     }))
 }

@@ -10,7 +10,7 @@ import Dialog from '@/components/ui/dialog.vue'
 import NativeSelect from '@/components/ui/native-select.vue'
 import Button from '@/components/ui/button.vue'
 import Badge from '@/components/ui/badge.vue'
-import { Settings, Bot, Loader2, SlidersHorizontal } from 'lucide-vue-next'
+import { Settings, Bot, Loader2, SlidersHorizontal, MessageSquare, Plus, Trash2 } from 'lucide-vue-next'
 
 const router = useRouter()
 const store = useSessionStore()
@@ -19,6 +19,54 @@ const settingsStore = useSettingsStore()
 
 const messagesContainer = ref<HTMLElement | null>(null)
 const showSettings = ref(false)
+const showSidebar = ref(false)
+
+interface SessionEntry {
+  id: string
+  name: string
+  messageCount: number
+  timestamp: number
+}
+
+const sessions = ref<SessionEntry[]>([])
+
+function loadSessionHistory() {
+  try {
+    const saved = localStorage.getItem('juno-sessions')
+    if (saved) sessions.value = JSON.parse(saved)
+  } catch {}
+}
+
+function saveSession() {
+  if (store.messages.length === 0) return
+  const entry: SessionEntry = {
+    id: crypto.randomUUID(),
+    name: store.messages[0]?.content.slice(0, 50) || 'New session',
+    messageCount: store.messages.length,
+    timestamp: Date.now(),
+  }
+  const existing = sessions.value.findIndex(s => s.id === store.sessionId)
+  if (existing >= 0) {
+    sessions.value[existing] = { ...sessions.value[existing], messageCount: store.messages.length }
+  } else {
+    sessions.value.unshift(entry)
+  }
+  // Keep only 50 sessions
+  if (sessions.value.length > 50) sessions.value = sessions.value.slice(0, 50)
+  localStorage.setItem('juno-sessions', JSON.stringify(sessions.value))
+}
+
+function restoreSession(id: string) {
+  // For now: save current, load placeholder (real restore needs RPC)
+  saveSession()
+  store.clearMessages()
+  // In future: call RPC to load session
+}
+
+function deleteSession(id: string) {
+  sessions.value = sessions.value.filter(s => s.id !== id)
+  localStorage.setItem('juno-sessions', JSON.stringify(sessions.value))
+}
 
 const thinkingOptions = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh']
 
@@ -26,6 +74,7 @@ onMounted(async () => {
   if (!store.isConnected) {
     store.connect()
   }
+  loadSessionHistory()
   await Promise.all([
     providerStore.fetchProviders(),
     providerStore.fetchModels(true),
@@ -94,6 +143,9 @@ function handleAbort() {
         </span>
       </div>
       <div class="flex items-center gap-1">
+        <Button variant="ghost" size="sm" @click="showSidebar = !showSidebar">
+          <MessageSquare class="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="sm" @click="showSettings = true">
           <SlidersHorizontal class="h-4 w-4 mr-1" />
           Settings
@@ -102,11 +154,37 @@ function handleAbort() {
           <Settings class="h-4 w-4 mr-1" />
           Models
         </Button>
-        <Button variant="ghost" size="sm" @click="store.clearMessages()">
-          Clear
+        <Button variant="ghost" size="sm" @click="saveSession(); store.clearMessages()">
+          <Plus class="h-4 w-4 mr-1" />
+          New
         </Button>
       </div>
     </header>
+
+    <div class="flex flex-1 overflow-hidden">
+      <div v-if="showSidebar" class="w-64 border-r overflow-y-auto p-2 flex-shrink-0 space-y-1">
+        <div class="flex items-center justify-between px-2 py-1">
+          <span class="text-xs font-medium text-muted-foreground">Sessions</span>
+          <Button variant="ghost" size="sm" @click="showSidebar = false">
+            <Trash2 class="h-3 w-3" />
+          </Button>
+        </div>
+        <div v-if="sessions.length === 0" class="text-xs text-muted-foreground text-center py-4">
+          No saved sessions
+        </div>
+        <button
+          v-for="s in sessions"
+          :key="s.id"
+          class="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent text-left"
+          @click="restoreSession(s.id)"
+        >
+          <MessageSquare class="h-3 w-3 flex-shrink-0" />
+          <div class="min-w-0 flex-1">
+            <div class="truncate">{{ s.name }}</div>
+            <div class="text-muted-foreground">{{ s.messageCount }} msgs</div>
+          </div>
+        </button>
+      </div>
 
     <div
       ref="messagesContainer"
@@ -123,6 +201,7 @@ function handleAbort() {
         :key="msg.id"
         :message="msg"
       />
+    </div>
     </div>
 
     <div class="border-t p-4">

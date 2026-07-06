@@ -1,10 +1,30 @@
 use crate::config;
 use crate::pi_rpc::PiRpcManager;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
+
+#[derive(Clone, serde::Serialize)]
+pub struct SessionState {
+    pub is_streaming: bool,
+    pub message_count: u32,
+    pub is_connected: bool,
+    pub session_id: String,
+}
+
+impl Default for SessionState {
+    fn default() -> Self {
+        Self {
+            is_streaming: false,
+            message_count: 0,
+            is_connected: false,
+            session_id: String::new(),
+        }
+    }
+}
 
 pub struct AppState {
     pub pi: Arc<Mutex<PiRpcManager>>,
+    pub current_state: Arc<RwLock<SessionState>>,
 }
 
 // ── Provider commands ──
