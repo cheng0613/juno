@@ -331,3 +331,62 @@ pub fn get_models(available_only: bool) -> Vec<ModelSummary> {
 
     result
 }
+
+// ── Extensions & Skills listing ──
+
+#[derive(Serialize, Clone)]
+pub struct ExtensionInfo {
+    pub name: String,
+    pub path: String,
+    pub kind: String,
+    pub description: String,
+}
+
+pub fn list_extensions() -> Vec<ExtensionInfo> {
+    let mut items = Vec::new();
+    let base = juno_agent_dir();
+
+    let ext_dir = base.join("extensions");
+    if ext_dir.exists() {
+        if let Ok(entries) = std::fs::read_dir(&ext_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("ts") {
+                    let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string();
+                    items.push(ExtensionInfo {
+                        name,
+                        path: path.to_string_lossy().to_string(),
+                        kind: "extension".to_string(),
+                        description: String::new(),
+                    });
+                }
+            }
+        }
+    }
+
+    let skills_dir = base.join("skills");
+    if skills_dir.exists() {
+        if let Ok(entries) = std::fs::read_dir(&skills_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let skill_md = path.join("SKILL.md");
+                    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+                    let description = if skill_md.exists() {
+                        if let Ok(content) = std::fs::read_to_string(&skill_md) {
+                            content.lines().next().unwrap_or("").to_string()
+                        } else { String::new() }
+                    } else { String::new() };
+                    items.push(ExtensionInfo {
+                        name,
+                        path: skill_md.to_string_lossy().to_string(),
+                        kind: "skill".to_string(),
+                        description,
+                    });
+                }
+            }
+        }
+    }
+
+    items
+}

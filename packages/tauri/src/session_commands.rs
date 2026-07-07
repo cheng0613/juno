@@ -48,7 +48,6 @@ pub fn list_files(query: String) -> Result<Vec<serde_json::Value>, String> {
         }
     }
 
-    // Also walk subdirectories one level deep
     if let Ok(entries) = std::fs::read_dir(&cwd) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -79,4 +78,9 @@ pub fn list_files(query: String) -> Result<Vec<serde_json::Value>, String> {
 
     results.truncate(20);
     Ok(results)
+}
+
+#[tauri::command]
+pub fn list_extensions() -> Result<Vec<config::ExtensionInfo>, String> {
+    Ok(config::list_extensions())
 }

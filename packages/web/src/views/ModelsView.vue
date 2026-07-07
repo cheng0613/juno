@@ -12,7 +12,7 @@ import Dialog from '@/components/ui/dialog.vue'
 import {
   ArrowLeft, Key, Plus, Trash2, Check, X,
   Loader2, Globe, Wifi, WifiOff, Terminal, ChevronDown, ChevronRight,
-  Search, Settings2, BookOpen, Server,
+  Search, Settings2, BookOpen, Server, Puzzle, Code,
 } from 'lucide-vue-next'
 import { api } from '@/api/httpClient'
 
@@ -28,6 +28,31 @@ const testResults = ref<Record<string, any>>({})
 const testingProviders = ref<Set<string>>(new Set())
 const expandedSections = ref<Record<string, boolean>>({})
 const modelSearchQuery = ref('')
+const activeTab = ref<'providers' | 'extensions'>('providers')
+const extensions = ref<any[]>([])
+const extensionsLoading = ref(false)
+
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI__' in window
+}
+
+async function tauriInvoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  const tauri = (window as any).__TAURI__
+  if (tauri?.core) return tauri.core.invoke(cmd, args)
+  throw new Error('Not in Tauri environment')
+}
+
+async function fetchExtensions() {
+  if (!isTauri()) return
+  extensionsLoading.value = true
+  try {
+    extensions.value = await tauriInvoke<any[]>('list_extensions')
+  } catch (err) {
+    console.error('Failed to list extensions:', err)
+  } finally {
+    extensionsLoading.value = false
+  }
+}
 
 const filteredProviders = computed(() => {
   if (!searchQuery.value) return providerStore.providers
@@ -243,38 +268,88 @@ const showSettingsPanel = ref(false)
 
     <div class="flex flex-1 overflow-hidden">
       <div class="w-80 border-r overflow-y-auto p-2 space-y-1 flex-shrink-0">
-        <div class="px-2 py-1 text-xs font-medium text-muted-foreground">Providers</div>
-
-        <div class="relative px-2 mb-2">
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            v-model="searchQuery"
-            placeholder="Search providers..."
-            class="pl-7 h-8 text-xs"
-          />
+        <div class="flex gap-1 px-2 mb-2 border-b pb-2">
+          <button
+            :class="[
+              'flex-1 px-2 py-1 text-xs rounded transition-colors',
+              activeTab === 'providers' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+            ]"
+            @click="activeTab = 'providers'"
+          >
+            <Globe class="h-3 w-3 inline mr-1" />Providers
+          </button>
+          <button
+            :class="[
+              'flex-1 px-2 py-1 text-xs rounded transition-colors',
+              activeTab === 'extensions' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+            ]"
+            @click="activeTab = 'extensions'; fetchExtensions()"
+          >
+            <Puzzle class="h-3 w-3 inline mr-1" />Ext/Skills
+          </button>
         </div>
 
-        <button
-          v-for="p in filteredProviders"
-          :key="p.name"
-          :class="[
-            'w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors',
-            selectedProvider === p.name ? 'bg-accent' : '',
-          ]"
-          @click="selectedProvider = p.name"
-        >
-          <div :class="[
-            'h-2 w-2 rounded-full flex-shrink-0',
-            p.authStatus === 'configured' ? 'bg-green-500' : 'bg-gray-300',
-          ]" />
-          <div class="flex-1 text-left min-w-0">
-            <div class="truncate font-medium">{{ p.displayName }}</div>
-            <div class="text-xs text-muted-foreground truncate">{{ p.name }}</div>
+        <template v-if="activeTab === 'providers'">
+          <div class="px-2 py-1 text-xs font-medium text-muted-foreground">Providers</div>
+
+          <div class="relative px-2 mb-2">
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              v-model="searchQuery"
+              placeholder="Search providers..."
+              class="pl-7 h-8 text-xs"
+            />
           </div>
-          <Badge :variant="p.authStatus === 'configured' ? 'default' : 'outline'" class="flex-shrink-0">
-            {{ p.availableModelCount || 0 }}
-          </Badge>
-        </button>
+
+          <button
+            v-for="p in filteredProviders"
+            :key="p.name"
+            :class="[
+              'w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors',
+              selectedProvider === p.name ? 'bg-accent' : '',
+            ]"
+            @click="selectedProvider = p.name"
+          >
+            <div :class="[
+              'h-2 w-2 rounded-full flex-shrink-0',
+              p.authStatus === 'configured' ? 'bg-green-500' : 'bg-gray-300',
+            ]" />
+            <div class="flex-1 text-left min-w-0">
+              <div class="truncate font-medium">{{ p.displayName }}</div>
+              <div class="text-xs text-muted-foreground truncate">{{ p.name }}</div>
+            </div>
+            <Badge :variant="p.authStatus === 'configured' ? 'default' : 'outline'" class="flex-shrink-0">
+              {{ p.availableModelCount || 0 }}
+            </Badge>
+          </button>
+        </template>
+
+        <template v-if="activeTab === 'extensions'">
+          <div class="px-2 py-1 text-xs font-medium text-muted-foreground">
+            Extensions & Skills
+          </div>
+          <div v-if="extensionsLoading" class="text-xs text-center text-muted-foreground py-4">
+            Loading...
+          </div>
+          <div v-else-if="extensions.length === 0" class="text-xs text-center text-muted-foreground py-4">
+            <Puzzle class="h-8 w-8 mx-auto mb-2 opacity-50" />
+            No extensions or skills installed
+          </div>
+          <div v-else class="space-y-1">
+            <div
+              v-for="ext in extensions"
+              :key="ext.path"
+              class="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+            >
+              <component :is="ext.kind === 'skill' ? BookOpen : Code" class="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              <div class="min-w-0 flex-1">
+                <div class="truncate font-medium">{{ ext.name }}</div>
+                <div class="truncate text-xs text-muted-foreground">{{ ext.description || ext.kind }}</div>
+              </div>
+              <Badge variant="outline" class="flex-shrink-0">{{ ext.kind }}</Badge>
+            </div>
+          </div>
+        </template>
 
         <div class="mt-4 pt-2 border-t space-y-1 px-2">
           <div class="text-xs font-medium text-muted-foreground mb-1">Actions</div>
@@ -327,12 +402,39 @@ const showSettingsPanel = ref(false)
       </div>
 
       <div class="flex-1 overflow-y-auto p-6">
-        <div v-if="!selectedProvider" class="flex h-full items-center justify-center text-muted-foreground">
-          <div class="text-center">
-            <Globe class="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>Select a provider to configure</p>
+        <template v-if="activeTab === 'extensions'">
+          <div class="max-w-3xl mx-auto space-y-6">
+            <div>
+              <h2 class="text-xl font-bold">Extensions & Skills</h2>
+              <p class="text-sm text-muted-foreground">
+                Located in ~/.juno/agent/ (extensions: *.ts, skills: */SKILL.md)
+              </p>
+            </div>
+            <div v-if="extensions.length === 0" class="text-center py-8 text-muted-foreground">
+              <Puzzle class="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No extensions or skills found</p>
+              <p class="text-xs mt-1">Add TypeScript files to ~/.juno/agent/extensions/ or SKILL.md to ~/.juno/agent/skills/</p>
+            </div>
+            <div v-for="ext in extensions" :key="ext.path">
+              <Card class="p-4">
+                <div class="flex items-center gap-2 mb-1">
+                  <component :is="ext.kind === 'skill' ? BookOpen : Code" class="h-4 w-4" />
+                  <span class="font-semibold">{{ ext.name }}</span>
+                  <Badge variant="outline" class="ml-auto">{{ ext.kind }}</Badge>
+                </div>
+                <p v-if="ext.description" class="text-xs text-muted-foreground">{{ ext.description }}</p>
+                <p class="text-xs text-muted-foreground mt-1 truncate">{{ ext.path }}</p>
+              </Card>
+            </div>
           </div>
-        </div>
+        </template>
+        <template v-else>
+          <div v-if="!selectedProvider" class="flex h-full items-center justify-center text-muted-foreground">
+            <div class="text-center">
+              <Globe class="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Select a provider to configure</p>
+            </div>
+          </div>
 
         <template v-else-if="selectedProviderDetail">
           <div class="max-w-3xl mx-auto space-y-6">
@@ -493,6 +595,7 @@ const showSettingsPanel = ref(false)
               </div>
             </Card>
           </div>
+        </template>
         </template>
       </div>
     </div>
