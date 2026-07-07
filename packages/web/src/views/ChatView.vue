@@ -179,39 +179,51 @@ function handleAbort() {
 
 <template>
   <div class="flex h-screen flex-col">
-    <header class="flex items-center justify-between border-b px-4 py-2">
-      <div class="flex items-center gap-2">
-        <Bot class="h-5 w-5" />
-        <span class="font-semibold">Juno</span>
-        <span v-if="store.currentModel" class="text-xs text-muted-foreground hidden sm:inline">
+    <header class="flex items-center justify-between border-b px-2 sm:px-4 py-2 gap-1">
+      <div class="flex items-center gap-1 sm:gap-2 min-w-0">
+        <Bot class="h-5 w-5 flex-shrink-0" />
+        <span class="font-semibold hidden sm:inline">Juno</span>
+        <span v-if="store.currentModel" class="text-xs text-muted-foreground truncate hidden md:inline">
           · {{ store.currentModel }}
         </span>
         <span v-if="store.isStreaming" class="flex items-center gap-1 text-xs text-muted-foreground">
           <Loader2 class="h-3 w-3 animate-spin" />
-          streaming
+          <span class="hidden sm:inline">streaming</span>
         </span>
       </div>
       <div class="flex items-center gap-1">
-        <Button variant="ghost" size="sm" @click="showSidebar = !showSidebar">
+        <Button variant="ghost" size="sm" class="sm:hidden" @click="showSidebar = !showSidebar">
           <MessageSquare class="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" @click="showSettings = true">
-          <SlidersHorizontal class="h-4 w-4 mr-1" />
-          Settings
+        <Button variant="ghost" size="sm" class="hidden sm:inline-flex" @click="showSidebar = !showSidebar">
+          <MessageSquare class="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" @click="router.push('/models')">
-          <Settings class="h-4 w-4 mr-1" />
-          Models
+        <Button variant="ghost" size="sm" class="hidden sm:inline-flex" @click="showSettings = true">
+          <SlidersHorizontal class="h-4 w-4 sm:mr-1" />
+          <span class="hidden md:inline">Settings</span>
+        </Button>
+        <Button variant="ghost" size="sm" class="hidden sm:inline-flex" @click="router.push('/models')">
+          <Settings class="h-4 w-4 sm:mr-1" />
+          <span class="hidden md:inline">Models</span>
         </Button>
         <Button variant="ghost" size="sm" @click="store.clearMessages()">
-          <Plus class="h-4 w-4 mr-1" />
-          New
+          <Plus class="h-4 w-4 sm:mr-1" />
+          <span class="hidden md:inline">New</span>
         </Button>
       </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden">
-      <div v-if="showSidebar" class="w-64 border-r overflow-y-auto p-2 flex-shrink-0 space-y-1">
+    <div class="flex flex-1 overflow-hidden relative">
+      <!-- Sidebar: overlay on mobile, side panel on desktop -->
+      <div
+        v-if="showSidebar"
+        class="absolute inset-0 z-30 bg-background/80 backdrop-blur-sm sm:relative sm:inset-auto sm:bg-transparent sm:backdrop-blur-none"
+        @click="showSidebar = false"
+      />
+      <div
+        v-show="showSidebar"
+        class="absolute left-0 top-0 bottom-0 z-40 w-72 border-r bg-background overflow-y-auto p-2 space-y-1 sm:relative sm:z-auto sm:w-64 lg:w-72 flex-shrink-0 transition-transform"
+      >
         <div class="flex items-center justify-between px-2 py-1">
           <span class="text-xs font-medium text-muted-foreground">Sessions</span>
           <Button variant="ghost" size="sm" @click="showSidebar = false">
@@ -237,7 +249,7 @@ function handleAbort() {
 
     <div
       ref="messagesContainer"
-      class="flex-1 overflow-y-auto p-4 space-y-4"
+      class="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4"
     >
       <div v-if="store.messages.length === 0" class="flex h-full items-center justify-center text-muted-foreground">
         <div class="text-center">

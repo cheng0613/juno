@@ -267,7 +267,7 @@ const showSettingsPanel = ref(false)
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-      <div class="w-80 border-r overflow-y-auto p-2 space-y-1 flex-shrink-0">
+      <div class="w-full sm:w-80 border-r overflow-y-auto p-2 space-y-1 flex-shrink-0">
         <div class="flex gap-1 px-2 mb-2 border-b pb-2">
           <button
             :class="[
@@ -401,7 +401,7 @@ const showSettingsPanel = ref(false)
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex-1 overflow-y-auto p-2 sm:p-6">
         <template v-if="activeTab === 'extensions'">
           <div class="max-w-3xl mx-auto space-y-6">
             <div>
