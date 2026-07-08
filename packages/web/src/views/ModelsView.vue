@@ -254,21 +254,20 @@ const showSettingsPanel = ref(false)
 </script>
 
 <template>
-  <div class="flex h-screen flex-col">
-    <header class="flex items-center gap-2 border-b px-4 py-2">
+  <div class="flex flex-col min-h-0 flex-1">
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-border">
       <Button variant="ghost" size="sm" @click="router.push('/')">
         <ArrowLeft class="h-4 w-4 mr-1" />
         Back
       </Button>
-      <span class="font-semibold">LLM Configuration</span>
-      <span class="text-xs text-muted-foreground ml-auto">
+      <span class="text-xs text-muted-foreground">
         {{ providerStore.providers.length }} providers
       </span>
-    </header>
+    </div>
 
     <div class="flex flex-1 overflow-hidden">
-      <div class="w-full sm:w-80 border-r overflow-y-auto p-2 space-y-1 flex-shrink-0">
-        <div class="flex gap-1 px-2 mb-2 border-b pb-2">
+      <div class="w-full sm:w-80 overflow-y-auto p-2 space-y-1 flex-shrink-0">
+        <div class="flex gap-1 px-2 mb-2 pb-2">
           <button
             :class="[
               'flex-1 px-2 py-1 text-xs rounded transition-colors',
@@ -351,7 +350,7 @@ const showSettingsPanel = ref(false)
           </div>
         </template>
 
-        <div class="mt-4 pt-2 border-t space-y-1 px-2">
+        <div class="mt-4 pt-2 space-y-1 px-2">
           <div class="text-xs font-medium text-muted-foreground mb-1">Actions</div>
           <Button variant="outline" size="sm" class="w-full justify-start" @click="showCustomProviderDialog = true">
             <Plus class="h-3.5 w-3.5 mr-2" />

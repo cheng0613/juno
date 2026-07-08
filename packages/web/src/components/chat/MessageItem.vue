@@ -88,7 +88,7 @@ function toolIcon(name: string) {
       </div>
     </div>
 
-    <div :class="['max-w-[90%] sm:max-w-[80%] rounded-lg px-3 sm:px-4 py-2', message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted']">
+    <div :class="['max-w-[90%] sm:max-w-[80%] rounded-lg px-3 sm:px-4 py-2', message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border/50']">
       <div v-if="message.thinking" class="mb-2">
         <button
           class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
